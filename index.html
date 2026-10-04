@@ -1,7 +1,47 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="gate">
 <head>
 <meta charset="UTF-8">
+<!-- ===== Online-only gate: page stays hidden unless opened from the live address ===== -->
+<style id="gate-css">
+html.gate body>*:not(#lockscreen):not(noscript){display:none!important}
+#lockscreen{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;background:#0f172a;-webkit-user-select:none;user-select:none;font-family:'Noto Sans','Noto Sans Devanagari','Segoe UI',Roboto,Arial,sans-serif}
+#lockscreen .lock-card{max-width:420px;text-align:center;color:#e2e8f0;border:1px solid #334155;border-radius:16px;padding:28px 24px;background:#111c33}
+#lockscreen .lock-ico{font-size:40px;line-height:1}
+#lockscreen p{margin:14px 0 0;font-size:17px;line-height:1.55}
+#lockscreen p.mr{color:#cbd5e1}
+</style>
+<script>
+(function(){
+  // The page runs normally ONLY when it is opened over https from this exact host
+  // (and not inside someone else's frame). The check looks at the address, not at
+  // whether the phone is online, so the offline copy served by the service worker
+  // (still at https://fitterdm.github.io/...) keeps working.
+  var ALLOWED_HOST = 'fitterdm.github.io';
+  var ok = false;
+  try {
+    ok = location.protocol === 'https:' &&
+         location.hostname.toLowerCase() === ALLOWED_HOST &&
+         window.top === window.self;
+  } catch (e) { ok = false; }
+
+  if (ok) { document.documentElement.classList.remove('gate'); return; }
+
+  window.__LOCKED = true;
+  function lock(){
+    var b = document.body;
+    while (b.firstChild) b.removeChild(b.firstChild);
+    var d = document.createElement('div');
+    d.id = 'lockscreen';
+    d.innerHTML = '<div class="lock-card"><div class="lock-ico">\uD83D\uDD12</div>' +
+      '<p lang="en">This page can only be viewed online. Please scan the QR code to open it.</p><p class="mr" lang="mr">हे पृष्ठ फक्त ऑनलाइन पाहता येते. कृपया ते उघडण्यासाठी QR कोड स्कॅन करा.</p></div>';
+    b.appendChild(d);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', lock);
+  else lock();
+})();
+</script>
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f766e">
 <meta name="description" content="Advance Hydraulic Trainer Kit — Info Sheet / माहिती पत्रक">
@@ -389,32 +429,32 @@ table.spec-table td.value{font-size:15.5px!important; font-weight:800!important;
 
 footer{font-size:13px!important; font-weight:700!important;}
 
+</style>
 
-/* ===== TABLE OVERFLOW FIX: force wrapping so no text is cut off on mobile ===== */
-.wrap{overflow-x:hidden!important;}
-table.info-table, table.spec-table{
-  table-layout:fixed!important;
-  width:100%!important;
-  max-width:100%!important;
-}
-table.info-table td, table.info-table th,
-table.spec-table td, table.spec-table th{
-  word-wrap:break-word!important;
-  overflow-wrap:break-word!important;
-  word-break:break-word!important;
-  white-space:normal!important;
-  hyphens:auto!important;
-}
-@media(max-width:480px){
-  table.info-table th, table.info-table td{padding:6px 5px!important;}
-  .info-table{font-size:13.5px!important;}
-  .info-table th{font-size:13px!important;}
-  .info-table td{font-size:13.5px!important;}
+<style id="protect-css">
+/* ===== Copy protection (the "Find a topic" box and language list stay usable) ===== */
+html,body,body *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,select{-webkit-user-select:text!important;user-select:text!important}
+img{-webkit-user-drag:none;user-drag:none}
+
+/* ===== Printing blocked: print / "Save as PDF" produce a notice only ===== */
+@media print{
+  html{background:#fff!important}
+  body{display:none!important}
+  html::before{content:"Printing is disabled. / छपाई बंद आहे.";display:block;padding:40px;font:16px/1.5 sans-serif;color:#111}
 }
 
+/* ===== Floating full-screen button ===== */
+.fs-btn{position:fixed;left:max(14px,env(safe-area-inset-left));bottom:max(16px,env(safe-area-inset-bottom));z-index:1100;display:none;align-items:center;gap:7px;border:0;border-radius:999px;padding:10px 15px 10px 12px;background:#0f766e;color:#fff;font:700 13px/1 'Noto Sans','Segoe UI',Roboto,Arial,sans-serif;box-shadow:0 8px 20px rgba(15,118,110,.3);cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.fs-btn.show{display:inline-flex}
+.fs-btn:active{transform:scale(.97)}
+.fs-btn:focus-visible{outline:3px solid #fbbf24;outline-offset:2px}
+.fs-btn svg{width:16px;height:16px;flex:none}
+@media print{.fs-btn{display:none!important}}
 </style>
 </head>
 <body>
+<noscript><div id="lockscreen"><div class="lock-card"><div class="lock-ico">&#128274;</div><p lang="en">Please turn on JavaScript to view this page.</p><p class="mr" lang="mr">हे पृष्ठ पाहण्यासाठी JavaScript चालू करा.</p></div></div></noscript>
 <div class="wrap">
 
   <header class="hero">
@@ -1346,21 +1386,22 @@ table.spec-table td, table.spec-table th{
 </div>
 
 <script>
-  // ===== Content protection: watermark + copy/save/devtools blocking =====
+  // ===== Content protection + full-screen button + offline registration =====
   (function(){
+    if (window.__LOCKED) return;          // locked pages show nothing, so nothing to set up
+
     var WATERMARK_TEXT = "Dinesh@Fitter";
 
+    /* ---- watermark (unchanged) ---- */
     var wm = document.createElement('div');
     wm.className = 'protect-watermark';
     wm.setAttribute('aria-hidden', 'true');
     document.body.appendChild(wm);
-
     function paintWatermark(){
       wm.innerHTML = '';
       var stepX = 300;
       var w = window.innerWidth + stepX;
       var h = window.innerHeight;
-      // Two visible bands per screen: just above the vertical middle, and near the bottom
       var rows = [h * 0.38, h * 0.90];
       for (var r = 0; r < rows.length; r++){
         var y = rows[r];
@@ -1376,29 +1417,99 @@ table.spec-table td, table.spec-table th{
     paintWatermark();
     window.addEventListener('resize', paintWatermark);
 
-    document.addEventListener('contextmenu', function(e){ e.preventDefault(); });
-    document.addEventListener('selectstart', function(e){ e.preventDefault(); });
-    document.addEventListener('dragstart', function(e){ e.preventDefault(); });
-    document.addEventListener('copy', function(e){ e.preventDefault(); });
-    document.addEventListener('cut', function(e){ e.preventDefault(); });
-
+    /* ---- copy / select / long-press / right-click / drag / save / print ---- */
+    function isField(t){
+      if (t && t.nodeType === 3) t = t.parentElement;
+      return !!(t && t.closest && t.closest('input,textarea,select,[contenteditable="true"]'));
+    }
+    var cap = true;
+    document.addEventListener('contextmenu', function(e){ e.preventDefault(); }, cap);   // right-click + long-press menu
+    document.addEventListener('selectstart', function(e){ if (!isField(e.target)) e.preventDefault(); }, cap);
+    document.addEventListener('dragstart',   function(e){ e.preventDefault(); }, cap);
+    ['copy','cut'].forEach(function(type){
+      document.addEventListener(type, function(e){
+        if (isField(e.target)) return;                       // typing in the search box stays normal
+        try { if (e.clipboardData) e.clipboardData.setData('text/plain', ''); } catch (x) {}
+        e.preventDefault();
+      }, cap);
+    });
+    // If a browser still manages to start a selection (e.g. Android "smart select"), drop it.
+    document.addEventListener('selectionchange', function(){
+      var a = document.activeElement;
+      if (a && /^(INPUT|TEXTAREA)$/.test(a.tagName)) return;
+      var sel = window.getSelection && window.getSelection();
+      if (sel && sel.rangeCount && !sel.isCollapsed) sel.removeAllRanges();
+    });
     document.addEventListener('keydown', function(e){
       var k = e.key ? e.key.toLowerCase() : '';
-      var ctrlOrCmd = e.ctrlKey || e.metaKey;
-      var blockedCombo = ctrlOrCmd && ['s','c','p','u','x'].indexOf(k) !== -1;
-      var devtoolsKey = (e.key === 'F12') ||
-        (ctrlOrCmd && e.shiftKey && ['i','j','c'].indexOf(k) !== -1);
-      if (blockedCombo || devtoolsKey){
+      var mod = e.ctrlKey || e.metaKey;
+      var always = mod && ['s','p','u'].indexOf(k) !== -1;                         // save, print, view-source
+      var outsideField = mod && ['c','x','a'].indexOf(k) !== -1 && !isField(e.target);
+      var devtools = e.key === 'F12' ||
+        (mod && e.shiftKey && ['i','j','c'].indexOf(k) !== -1) ||
+        (e.metaKey && e.altKey && ['i','j','u'].indexOf(k) !== -1);
+      if (always || outsideField || devtools){
         e.preventDefault();
         e.stopPropagation();
         return false;
       }
-    });
+    }, cap);
+    try { window.print = function(){}; } catch (x) {}
+
+    /* ---- floating Full screen button (hidden where the browser has no fullscreen API, e.g. iPhone) ---- */
+    var de = document.documentElement;
+    var reqFs  = de.requestFullscreen  || de.webkitRequestFullscreen  || de.msRequestFullscreen;
+    var exitFs = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+    var fsOk = !!(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+    if (reqFs && exitFs && fsOk){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'fs-btn show';
+      btn.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="fs-lbl"></span>';
+      document.body.appendChild(btn);
+      var lbl = btn.querySelector('.fs-lbl');
+      var isFs = function(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); };
+      var sync = function(){
+        var on = isFs();
+        lbl.textContent = on ? 'Exit full screen' : 'Full screen';
+        btn.title = on ? 'पूर्ण स्क्रीनमधून बाहेर पडा / Exit full screen' : 'पूर्ण स्क्रीन / Full screen';
+        btn.setAttribute('aria-label', btn.title);
+      };
+      sync();
+      btn.addEventListener('click', function(){
+        try {
+          if (isFs()) { exitFs.call(document); }
+          else {
+            var p = reqFs.call(de, {navigationUI: 'hide'});
+            if (p && p.catch) p.catch(function(){});
+          }
+        } catch (x) {}
+      });
+      document.addEventListener('fullscreenchange', sync);
+      document.addEventListener('webkitfullscreenchange', sync);
+    }
+
+    /* ---- offline: shared service worker at https://fitterdm.github.io/sw.js ---- */
+    if ('serviceWorker' in navigator && location.protocol === 'https:'){
+      window.addEventListener('load', function(){
+        navigator.serviceWorker.register('/sw.js').then(function(){
+          return navigator.serviceWorker.ready;
+        }).then(function(reg){
+          // First visit (page not yet controlled): ask the worker to save this page + fonts now.
+          if (!navigator.serviceWorker.controller && reg.active){
+            reg.active.postMessage({type: 'CACHE_URL', url: location.href});
+          }
+        }).catch(function(){});
+      });
+    }
   })();
 </script>
 
 <script>
 (function(){
+ if(window.__LOCKED) return;
  const $=s=>document.querySelector(s), $$=s=>document.querySelectorAll(s);
  const sections=[...$$('.card')];
  sections.forEach((card,i)=>{
